@@ -41,6 +41,7 @@ const { values } = parseArgs({
     "capture-ms": { type: "string", default: "8000" },
     "transcript-late-paint": { type: "boolean", default: false },
     "dashboard-end-anchor": { type: "boolean", default: false },
+    "plugin-activation": { type: "boolean", default: false },
     "reload-after-navigation": { type: "boolean", default: false },
     "cpu-profile": { type: "boolean", default: false },
     route: { type: "string", default: "both" },
@@ -54,7 +55,7 @@ if (values.help) {
   --dist dist --ui-root dist/control-ui --output .local/warm-reload-proof
   --admission signed-in|token --base <dist|ref> --candidate <dist|ref>
   --reloads 11 --sessions 3000 --rtt-ms 80 --capture-ms 8000 --route both|chat|dashboard
-  --transcript-late-paint --dashboard-end-anchor --reload-after-navigation --cpu-profile
+  --transcript-late-paint --dashboard-end-anchor --plugin-activation --reload-after-navigation --cpu-profile
 Creates fresh isolated state and Chromium, records cold + warm reloads, then stops both.
 Offline paint audit: --audit-report <report.json> --paint-audit <paint-audit.json>
 See scripts/perf/warm-reload-proof.md for metric definitions and limitations.`);
@@ -477,6 +478,8 @@ async function captureReload(
       "firstDashboardContentDomMs",
       "firstPaintedRowsMs",
       "bottomParagraphPaintMs",
+      "transcriptTextPaintMs",
+      "pluginsCompleteMs",
       "finalRowsDomMs",
       "helloPublishedMs",
       "helloHandledMs",
@@ -495,6 +498,9 @@ async function captureReload(
       ...probe.animationSamples,
       ...probe.sidebarFrames,
       ...probe.transcriptGeometry,
+      ...probe.pluginStates,
+      ...probe.pluginMarks,
+      ...probe.textPaints,
     ]) {
       entry.atMs += documentOffsetMs;
     }
@@ -736,6 +742,7 @@ try {
     sessions,
     transcriptLatePaint: values["transcript-late-paint"],
     dashboardEndAnchor: values["dashboard-end-anchor"],
+    pluginActivation: values["plugin-activation"],
     ...(admission
       ? {
           admission: {
